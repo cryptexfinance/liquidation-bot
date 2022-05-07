@@ -10,8 +10,7 @@ import "../contracts/interfaces/SushiSwap/ISushiSwapFactory.sol";
 import "../contracts/interfaces/SushiSwap/ISushiSwapRouter.sol";
 import "../contracts/interfaces/SushiSwap/ISushiSwapPair.sol";
 
-
-contract ChainlinkOracleTest is Test {
+contract LiquidationBotTest is Test {
     Vm public VM;
     IChainlinkOracle wethOracle;
     IChainlinkOracle tcapOracle;
@@ -32,6 +31,8 @@ contract ChainlinkOracleTest is Test {
     address constant sushiSwapFactoryAddress = 0xc35DADB65012eC5796536bD9864eD8773aBc74C4;
     /// @notice SushiSwap router address on kovan
     address constant sushiSwapRouterAddress = 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506;
+    /// @notice DyDx ISoloMargin address on kovan
+    address constant SoloMarginAddress = 0x4EC3570cADaAEE08Ae384779B0f3A45EF85289DE;
 
     address constant wethAddress = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
 
@@ -91,7 +92,12 @@ contract ChainlinkOracleTest is Test {
     }
 
     function testFlashLoan() public {
-        LiquidateVault bot = new LiquidateVault(wethAddress, TCAPAddress);
+        LiquidateVault bot = new LiquidateVault(
+            wethAddress,
+            TCAPAddress,
+            SoloMarginAddress,
+            sushiSwapRouterAddress
+        );
         createVaultForLiquidation();
         liquidationSetup();
         assertEq(WETH.balanceOf(address(bot)), 0);

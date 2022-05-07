@@ -19,14 +19,20 @@ contract LiquidateVault {
   ISushiSwapRouter public immutable sushiSwapRouter;
   address immutable WETHAddress;
   address immutable TCAPAddress;
-  constructor (address _WETHAdress, address _TCAPAdress) {
+
+  constructor (
+    address _WETHAdress,
+    address _TCAPAdress,
+    address _SoloMarginAddress,
+    address _SushiSwapRouterAddress
+  ) {
     WETHAddress = _WETHAdress;
     TCAPAddress = _TCAPAdress;
     WETH = IWETH(WETHAddress);
     TCAP = IERC20(TCAPAddress);
-    SOLO_MARGIN = ISoloMargin(0x4EC3570cADaAEE08Ae384779B0f3A45EF85289DE);
+    SOLO_MARGIN = ISoloMargin(_SoloMarginAddress);
     WETH.approve(address(SOLO_MARGIN), type(uint256).max);
-    sushiSwapRouter = ISushiSwapRouter(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
+    sushiSwapRouter = ISushiSwapRouter(_SushiSwapRouterAddress);
     WETH.approve(address(sushiSwapRouter), type(uint256).max);
   }
 
@@ -41,6 +47,7 @@ contract LiquidateVault {
     isProfitable = reward >= (loanAmount + liquidationFee + 2 wei);
   }
 
+  /// @notice gets a flashloan from dydx to liquidate the vault
   function initiateFlashLoan(address vault, uint256 vaultId) external {
     ITCAPVault tcapVault = ITCAPVault(vault);
     uint256 vaultRatio = tcapVault.getVaultRatio(vaultId);
@@ -113,6 +120,7 @@ contract LiquidateVault {
     SOLO_MARGIN.operate(accountInfos, operations);
   }
 
+  /// @notice callback called by dydx ISoloMargin
   function callFunction(
     address,
     Account.Info memory,
