@@ -8,6 +8,8 @@ import "./interfaces/DyDx/ISoloMargin.sol";
 import "./interfaces/SushiSwap/ISushiSwapRouter.sol";
 import "./interfaces/CryptexFinance/ITCAPVault.sol";
 
+import "forge-std/console.sol";
+
 
 /// @title Liquidate Tcap Vaults
 /// @author Cryptex.Finance
@@ -31,31 +33,43 @@ contract LiquidateVault {
     WETH = IWETH(WETHAddress);
     TCAP = IERC20(TCAPAddress);
     SOLO_MARGIN = ISoloMargin(_SoloMarginAddress);
-    WETH.approve(address(SOLO_MARGIN), type(uint256).max);
+    WETH.approve(_SoloMarginAddress, type(uint256).max);
     sushiSwapRouter = ISushiSwapRouter(_SushiSwapRouterAddress);
-    WETH.approve(address(sushiSwapRouter), type(uint256).max);
+    WETH.approve(_SushiSwapRouterAddress, type(uint256).max);
   }
 
   function isLiquidationProfitable(
-      address vault, uint256 vaultId, address[] memory path
+      address vault,
+      uint256 vaultId,
+      address[] memory path,
+      address[] memory swapPath
   ) public view returns(bool isProfitable) {
     ITCAPVault tcapVault = ITCAPVault(vault);
+    uint256 vaultRatio = tcapVault.getVaultRatio(vaultId);
+    if (vaultRatio >= tcapVault.ratio()) return false;
     uint256 requiredTCAP = tcapVault.requiredLiquidationTCAP(vaultId);
     uint256 liquidationFee = tcapVault.getFee(requiredTCAP);
     uint256 reward = tcapVault.liquidationReward(vaultId);
     uint256 loanAmount = sushiSwapRouter.getAmountsIn(requiredTCAP, path)[0];
+    if (swapPath.length >= 2) {
+       reward = sushiSwapRouter.getAmountsOut(
+         reward, swapPath
+       )[swapPath.length - 1];
+    }
     isProfitable = reward >= (loanAmount + liquidationFee + 2 wei);
   }
 
   /// @notice gets a flashloan from dydx to liquidate the vault
-  function initiateFlashLoan(address vault, uint256 vaultId) external {
+  function initiateFlashLoan(
+    address vault,
+    uint256 vaultId,
+    address[] memory swapPath
+  ) external {
     ITCAPVault tcapVault = ITCAPVault(vault);
-    uint256 vaultRatio = tcapVault.getVaultRatio(vaultId);
-    if (vaultRatio > tcapVault.ratio()) revert("Vault Cannot be liquidated");
     address[] memory path = new address[](2);
     path[0] = WETHAddress;
     path[1] = TCAPAddress;
-    if(!isLiquidationProfitable(vault, vaultId, path)) revert("Liquidation won't be profitable");
+    if(!isLiquidationProfitable(vault, vaultId, path, swapPath)) revert("Liquidation won't be profitable");
     uint256 requiredTCAP = tcapVault.requiredLiquidationTCAP(vaultId);
     uint256 liquidationFee = tcapVault.getFee(requiredTCAP);
     uint[] memory amounts = sushiSwapRouter.getAmountsIn(requiredTCAP, path);
@@ -93,7 +107,7 @@ contract LiquidateVault {
       otherAddress: address(this),
       otherAccountId: 0,
       // Purchase order
-      data: abi.encode(requiredTCAP, liquidationFee, vault, vaultId)
+      data: abi.encode(requiredTCAP, liquidationFee, vault, vaultId, swapPath)
     });
     operations[2] = Actions.ActionArgs({
       // Deposit Wrapped Ether back to dYdX
@@ -130,8 +144,9 @@ contract LiquidateVault {
         uint256 requiredTCAP,
         uint256 liquidationFee,
         address vault,
-        uint256 vaultID
-    ) = abi.decode(data, (uint256, uint256, address, uint256));
+        uint256 vaultId,
+        address[] memory swapPath
+    ) = abi.decode(data, (uint256, uint256, address, uint256, address[]));
     ITCAPVault tcapVault = ITCAPVault(vault);
     address[] memory path = new address[](2);
     path[0] = WETHAddress;
@@ -144,7 +159,20 @@ contract LiquidateVault {
         block.timestamp
     );
     if(liquidationFee > 0) WETH.withdraw(liquidationFee);
-    tcapVault.liquidateVault{value: liquidationFee}(vaultID, requiredTCAP);
+    uint256 reward = tcapVault.liquidationReward(vaultId);
+    tcapVault.liquidateVault{value: liquidationFee}(vaultId, requiredTCAP);
+
+    // swap reward for WETH
+    if (swapPath.length >= 2) {
+      IERC20(swapPath[0]).approve(address(sushiSwapRouter), reward);
+      sushiSwapRouter.swapExactTokensForTokens(
+        reward,
+        0,
+        swapPath,
+        address(this),
+        block.timestamp
+      );
+    }
   }
 
   receive() external payable {}

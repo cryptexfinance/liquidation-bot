@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 interface ITCAPVault {
-    function ratio() external returns (uint256);
+    function ratio() external view returns (uint256);
     function createVault() external;
     function addCollateral(uint256 _amount) external payable;
     function addCollateralETH() external payable;
