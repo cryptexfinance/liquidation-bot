@@ -188,6 +188,4 @@ contract LiquidateVault is Ownable {
   }
 
   receive() external payable {}
-
-  fallback() external payable {}
 }

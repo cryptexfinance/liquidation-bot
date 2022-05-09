@@ -34,7 +34,14 @@ setup(
     url='https://github.com/cryptexfinance/liquidation-bot',
     include_package_data=True,
     install_requires=[
-        "eth-brownie>=1.18.1,<2.0"
+        "alembic",
+        "eth-brownie>=1.18.1,<2.0",
+        "celery>=5.2.6,<6.0.0",
+        "celery-redbeat>=2.0.0,<3.0.0",
+        "psycopg2",
+        "python-dotenv>=0.16.0,<1.0.0",
+        "redis>=4.3.1,<5.0.0",
+        "SQLAlchemy>=1.4.36,<2.0.0",
     ],
     python_requires='>=3.8,<3.11',
     extras_require=extras_require,

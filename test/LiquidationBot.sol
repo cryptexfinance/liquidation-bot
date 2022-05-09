@@ -25,8 +25,6 @@ contract LiquidationBotTest is Test {
     address constant daiTCAPVaultAddress = 0xcF33394e2E6598BfB4e832077a4A79638E396F17;
     /// @notice WBTC TCAP vault address on kovan
     address constant wbtcTCAPVaultAddress = 0xcFEa090dF54547E6A0F582Ed295e7646596f5637;
-    /// @notice TCAP address on kovan
-    address constant TCAPAddress = 0xFEB4D2ffA65FF94C4E532d0e59a06Db132432b81;
     /// @notice SushiSwap factory address on kovan
     address constant sushiSwapFactoryAddress = 0xc35DADB65012eC5796536bD9864eD8773aBc74C4;
     /// @notice SushiSwap router address on kovan
@@ -39,6 +37,8 @@ contract LiquidationBotTest is Test {
     address constant daiAddress = 0x9f8abf6e69C465bB432CA36F99C198c896a703BD;
     /// @notice DAI address on kovan deployed by cryptex.finance
     address constant wbtcAddress = 0x7e79ef7A65972362b3b83a746d9C833758182330;
+    /// @notice TCAP address on kovan
+    address constant TCAPAddress = 0xFEB4D2ffA65FF94C4E532d0e59a06Db132432b81;
 
     uint256 constant tcapDivisor = 10000000000;
 

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import "openzeppelin-contracts/contracts/utils/Counters.sol";
+
 interface ITCAPVault {
+    function counter() external view returns (Counters.Counter calldata);
     function ratio() external view returns (uint256);
     function createVault() external;
     function addCollateral(uint256 _amount) external payable;
