@@ -1,0 +1,9 @@
+project_structure:
+    contracts: contracts
+    interfaces: contracts/interfaces
+    tests: test
+compiler:
+    solc:
+        remappings:
+          - "openzeppelin-contracts/=lib/openzeppelin-contracts/"
+          - "forge-std/=lib/forge-std/src/"

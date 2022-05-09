@@ -13,6 +13,10 @@ Install forge std library
 $ forge install foundry-rs/forge-std
 ```
 
+Install openzeppelin
+```bash
+$ forge install openzeppelin/openzeppelin-contracts
+```
 ## Run tests
 Tests use forge
 ```bash

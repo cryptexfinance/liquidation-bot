@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
+import "openzeppelin-contracts/contracts/access/Ownable.sol";
+
 import "./libraries/DyDx/DataStructures.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IWETH.sol";
@@ -8,13 +10,10 @@ import "./interfaces/DyDx/ISoloMargin.sol";
 import "./interfaces/SushiSwap/ISushiSwapRouter.sol";
 import "./interfaces/CryptexFinance/ITCAPVault.sol";
 
-import "forge-std/console.sol";
-
-
 /// @title Liquidate Tcap Vaults
 /// @author Cryptex.Finance
 /// @notice Liquidates TCAP vaults whose vault ratio is below minimum.
-contract LiquidateVault {
+contract LiquidateVault is Ownable {
   IWETH public immutable WETH;
   IERC20 public immutable TCAP;
   ISoloMargin public immutable SOLO_MARGIN;
@@ -173,6 +172,19 @@ contract LiquidateVault {
         block.timestamp
       );
     }
+  }
+
+  function recoverERC20(address _tokenAddress, uint256 _tokenAmount)
+  external
+  onlyOwner {
+    bool success = IERC20(_tokenAddress).transfer(owner(), _tokenAmount);
+	require(success, "recoverERC20: transfer failed");
+  }
+
+  function safeTransferETH(uint256 _value) external onlyOwner {
+    address _owner = owner();
+    (bool success,) = _owner.call{value : _value}(new bytes(0));
+    require(success, "safeTransferETH: ETH transfer failed");
   }
 
   receive() external payable {}

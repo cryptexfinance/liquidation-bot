@@ -17,10 +17,14 @@ contract LiquidationBotTest is Test {
     address constant tcapOracleAddress = 0x56F8be0f4cc9AA0775f4bA11AFcA0fcD84733800;
     /// @notice TCAP oracle address on kovan
     address constant daiOracleAddress = 0x5aFA13275d27007dBB65471F8d717cA9C36b92e5;
+    /// @notice WBTC oracle address on kovan
+    address constant wbtcOracleAddress = 0x5817b69BE6E130B59843fa82515318C6Df84B071;
     /// @notice WETH TCAP vault address on kovan
     address constant wethTCAPVaultAddress = 0x5543c16e5105ED1Da34e68b07C5888262e3AAbf8;
     /// @notice DAI TCAP vault address on kovan
     address constant daiTCAPVaultAddress = 0xcF33394e2E6598BfB4e832077a4A79638E396F17;
+    /// @notice WBTC TCAP vault address on kovan
+    address constant wbtcTCAPVaultAddress = 0xcFEa090dF54547E6A0F582Ed295e7646596f5637;
     /// @notice TCAP address on kovan
     address constant TCAPAddress = 0xFEB4D2ffA65FF94C4E532d0e59a06Db132432b81;
     /// @notice SushiSwap factory address on kovan
@@ -33,6 +37,8 @@ contract LiquidationBotTest is Test {
     address constant wethAddress = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
     /// @notice DAI address on kovan deployed by cryptex.finance
     address constant daiAddress = 0x9f8abf6e69C465bB432CA36F99C198c896a703BD;
+    /// @notice DAI address on kovan deployed by cryptex.finance
+    address constant wbtcAddress = 0x7e79ef7A65972362b3b83a746d9C833758182330;
 
     uint256 constant tcapDivisor = 10000000000;
 
@@ -42,11 +48,14 @@ contract LiquidationBotTest is Test {
     IChainlinkOracle wethOracle;
     IChainlinkOracle tcapOracle;
     IChainlinkOracle daiOracle;
+    IChainlinkOracle wbtcOracle;
     ITCAPVault wethTCAPVault;
     ITCAPVault daiTCAPVault;
+    ITCAPVault wbtcTCAPVault;
     IERC20 TCAP;
     IERC20 WETH;
     IERC20 DAI;
+    IERC20 WBTC;
     ISushiSwapFactory sushiSwapFactory;
     ISushiSwapRouter sushiSwapRouter;
 
@@ -55,11 +64,14 @@ contract LiquidationBotTest is Test {
         wethOracle = IChainlinkOracle(wethOracleAddress);
         tcapOracle = IChainlinkOracle(tcapOracleAddress);
         daiOracle = IChainlinkOracle(daiOracleAddress);
+        wbtcOracle = IChainlinkOracle(wbtcOracleAddress);
         wethTCAPVault = ITCAPVault(wethTCAPVaultAddress);
         daiTCAPVault = ITCAPVault(daiTCAPVaultAddress);
+        wbtcTCAPVault = ITCAPVault(wbtcTCAPVaultAddress);
         TCAP = IERC20(TCAPAddress);
         WETH = IERC20(wethAddress);
         DAI = IERC20(daiAddress);
+        WBTC = IERC20(wbtcAddress);
         sushiSwapFactory = ISushiSwapFactory(sushiSwapFactoryAddress);
         sushiSwapRouter = ISushiSwapRouter(sushiSwapRouterAddress);
     }
@@ -197,4 +209,91 @@ contract LiquidationBotTest is Test {
         bot.initiateFlashLoan(daiTCAPVaultAddress, 1, path);
         assertTrue(WETH.balanceOf(address(bot)) > 0);
     }
+
+    function liquidationSetupForWBTCVault() internal {
+        vm.deal(address(this), 9000000 ether);
+        uint wbtcUSD = wbtcOracle.getLatestAnswer();
+        uint tcapUSD = tcapOracle.getLatestAnswer() / tcapDivisor;
+        uint256 tcapTOMint = 2000 ether;
+        uint256 wbtcAmount = (10 * tcapUSD * tcapTOMint) / wbtcUSD;
+        WBTC.mint(address(this), wbtcAmount);
+        WBTC.approve(wbtcTCAPVaultAddress, type(uint256).max);
+//        mint TCAP
+        wbtcTCAPVault.createVault();
+		wbtcTCAPVault.addCollateral(
+            wbtcTCAPVault.requiredCollateral(tcapTOMint) + 1 wei
+        );
+		wbtcTCAPVault.mint(tcapTOMint);
+//      15 % increase from previous price
+        uint256 newTCAPPrice = (115 * tcapOracle.getLatestAnswer())/100 ;
+//      Mock Oracle price.
+        vm.mockCall(
+            tcapOracleAddress,
+            abi.encodeWithSelector(tcapOracle.getLatestAnswer.selector),
+            abi.encode(newTCAPPrice)
+        );
+//        Add TCAP/WETH Liquidity on SushiSwap
+        address pair = sushiSwapFactory.createPair(TCAPAddress, wethAddress);
+        uint ethUSD = wethOracle.getLatestAnswer();
+        uint ethAmount = (tcapTOMint * tcapUSD) / ethUSD;
+        TCAP.approve(pair, type(uint256).max);
+        TCAP.transfer(pair, tcapTOMint);
+        WETH.deposit{value: 1000 ether}();
+        WETH.approve(pair, type(uint256).max);
+        WETH.approve(address(sushiSwapRouter), type(uint256).max);
+        WETH.transfer(pair,  ethAmount);
+        ISushiSwapPair(pair).mint(address(this));
+
+//      Add WETH/DAI liquidity on Sushiswap
+        pair = sushiSwapFactory.createPair(wbtcAddress, wethAddress);
+        wbtcAmount = 100000 * 10 ** 8;
+        WBTC.mint(address(this), wbtcAmount);
+        ethAmount = (wbtcAmount * wbtcUSD * 10 ** 10) / ethUSD;
+        WBTC.approve(pair, type(uint256).max);
+        WBTC.transfer(pair, wbtcAmount);
+        WETH.deposit{value: ethAmount}();
+        WETH.approve(pair, type(uint256).max);
+        WETH.approve(address(sushiSwapRouter), type(uint256).max);
+        WETH.transfer(pair,  ethAmount);
+        ISushiSwapPair(pair).mint(address(this));
+    }
+
+    function createWBTCVaultForLiquidation() internal {
+        vm.startPrank(user);
+        wbtcTCAPVault.createVault();
+        uint256 tcapTOMint = 30 ether;
+        uint collateralRequired = wbtcTCAPVault.requiredCollateral(tcapTOMint) + 1 wei;
+        WBTC.mint(user, collateralRequired);
+        WBTC.approve(wbtcTCAPVaultAddress, type(uint256).max);
+		wbtcTCAPVault.addCollateral(collateralRequired);
+		wbtcTCAPVault.mint(tcapTOMint);
+        vm.stopPrank();
+    }
+
+    function testWBTCLiquidationProfitable() public {
+        createWBTCVaultForLiquidation();
+        liquidationSetupForWBTCVault();
+        LiquidateVault bot = new LiquidateVault(
+            wethAddress,
+            TCAPAddress,
+            SoloMarginAddress,
+            sushiSwapRouterAddress
+        );
+//        // begin test
+        assertEq(WETH.balanceOf(address(bot)), 0);
+        address[] memory path = new address[](2);
+        path[0] = wbtcAddress;
+        path[1] = wethAddress;
+        bot.initiateFlashLoan(wbtcTCAPVaultAddress, 1, path);
+        assertTrue(WETH.balanceOf(address(bot)) > 0);
+        assertEq(bot.owner(), address(this));
+        bot.transferOwnership(user);
+        assertEq(bot.owner(), user);
+        vm.startPrank(user);
+        bot.recoverERC20(wethAddress, WETH.balanceOf(address(bot)));
+        vm.stopPrank();
+        assertEq(WETH.balanceOf(address(bot)), 0);
+        assertTrue(WETH.balanceOf(user) > 0);
+    }
+
 }
