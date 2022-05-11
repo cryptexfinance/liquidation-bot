@@ -15,8 +15,20 @@ app.conf.beat_schedule = {
         'task': 'bot.tasks.discover_eth_vaults',
         'schedule': 60 * 60,  # 60 minutes
     },
-    'bot.tasks.check_vaults_for_liquidation': {
-        'task': 'bot.tasks.check_vaults_for_liquidation',
+    'bot.tasks.check_eth_vaults_for_liquidation': {
+        'task': 'bot.tasks.check_eth_vaults_for_liquidation',
+        'schedule': 15 * 60,
+    },
+    'bot.tasks.check_wbtc_vaults_for_liquidation': {
+        'task': 'bot.tasks.check_wbtc_vaults_for_liquidation',
+        'schedule': 15 * 60,
+    },
+    'bot.tasks.check_dai_vaults_for_liquidation': {
+        'task': 'bot.tasks.check_dai_vaults_for_liquidation',
+        'schedule': 15 * 60,
+    },
+    'bot.tasks.check_usdc_vaults_for_liquidation': {
+        'task': 'bot.tasks.check_usdc_vaults_for_liquidation',
         'schedule': 15 * 60,
     },
 }
