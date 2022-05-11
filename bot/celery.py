@@ -11,8 +11,12 @@ app.autodiscover_tasks([
 
 
 app.conf.beat_schedule = {
-    'bot.tasks.monitor_eth_vault': {
-        'task': 'bot.tasks.monitor_eth_vault',
-        'schedule': 15.0,
+    'bot.tasks.discover_eth_vaults': {
+        'task': 'bot.tasks.discover_eth_vaults',
+        'schedule': 60 * 60,  # 60 minutes
+    },
+    'bot.tasks.check_vaults_for_liquidation': {
+        'task': 'bot.tasks.check_vaults_for_liquidation',
+        'schedule': 15 * 60,
     },
 }
