@@ -3,8 +3,8 @@ from pathlib import Path
 from brownie.project import load, get_loaded_projects
 from brownie.network import connect, is_connected
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 
-from bot.gas import GasNowStrategy
 from bot.model import TCAPVaults, VaultTypes, insert_or_update_vaults, engine
 from bot.conf import settings
 
@@ -20,13 +20,14 @@ else:
 
 class Monitor:
     
-    def __init__(self, vault, vault_type, _network):
+    def __init__(self, vault, vault_type, _network, minimum_ratio=150):
         if not is_connected():
             connect(_network)
         interface = project.interface
         self.vault = vault
         self.tcap_vault = interface.ITCAPVault(vault)
         self.vault_type = vault_type
+        self.minimum_ratio = minimum_ratio
 
         self.liquidation_swap_path = {
             VaultTypes.WETH: [],
@@ -53,9 +54,12 @@ class Monitor:
         with Session(engine) as session:
             query = session.query(TCAPVaults).filter(
                 TCAPVaults.vault_type == self.vault_type,
-                TCAPVaults.vault_ratio != 0
+                and_(
+                    TCAPVaults.vault_ratio > 0,
+                    TCAPVaults.vault_ratio < self.minimum_ratio
+                )
             ).order_by("vault_ratio")
-            for vault in query.all():
+            for vault in query:
                 liquidation_fn_by_vault_type[self.vault_type].apply_async(
                     kwargs={"vault_id": vault.id}
                 )
@@ -64,7 +68,6 @@ class Monitor:
         liquidation_contract = project.LiquidateVault.at(
             settings.LIQUIDATE_VAULT_ADDRESS
         )
-        gas_strategy = GasNowStrategy()
         path = [settings.WETH_ADDRESS, settings.TCAP_ADDRESS]
         swap_path = self.liquidation_swap_path[self.vault_type]
         is_profitable = liquidation_contract.isLiquidationProfitable(

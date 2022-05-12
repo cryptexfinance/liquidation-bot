@@ -2,6 +2,9 @@ import pytest
 from web3 import Web3
 
 from brownie.project import get_loaded_projects
+from sqlalchemy.orm import Session
+
+from bot.model import TCAPVaults, metadata, engine
 
 to_wei = Web3.toWei
 
@@ -16,6 +19,13 @@ def project():
 @pytest.fixture()
 def user(accounts):
     return accounts[1]
+
+
+@pytest.fixture(autouse=True)
+def db_setup():
+    metadata.create_all(engine)
+    yield
+    metadata.drop_all(engine)
 
 
 def setup_initial_prices(
@@ -61,18 +71,18 @@ def setup_eth_tcap_exchange(
         sushi_swap_router,
 ):
     # Exchange setup
-    tcap_to_mint = to_wei(2000, "ether")
+    new_tcap_price = int(1.2 * tcap_price)
+    tcap_aggregator.setLatestAnswer(
+        new_tcap_price * tcap_divisor * 10 ** 8,
+        {"from": deployer_address.address}
+    )
+    tcap_to_mint = to_wei(20000, "ether")
     weth_vault_handler.createVault({"from": deployer_address.address})
     required_collateral = weth_vault_handler.requiredCollateral(tcap_to_mint)
     weth_vault_handler.addCollateralETH(
         {"value": required_collateral + 1, "from": deployer_address.address}
     )
     weth_vault_handler.mint(tcap_to_mint, {"from": deployer_address.address})
-    new_tcap_price = int(1.5 * tcap_price)
-    tcap_aggregator.setLatestAnswer(
-        new_tcap_price * tcap_divisor * 10 ** 8,
-        {"from": deployer_address.address}
-    )
     tx = sushi_swap_factory.createPair(
         TCAP.address, WETH.address,
         {"from": deployer_address.address}
@@ -83,7 +93,7 @@ def setup_eth_tcap_exchange(
     TCAP.approve(pair, 2 ** 256 - 1, {"from": deployer_address.address})
     TCAP.transfer(pair, tcap_to_mint, {"from": deployer_address.address})
     WETH.deposit(
-        {"value": to_wei(1000, "ether"), "from": deployer_address.address}
+        {"value": to_wei(10000, "ether"), "from": deployer_address.address}
     )
     WETH.approve(
         pair, 2 ** 256 - 1, {"from": deployer_address.address}
@@ -155,7 +165,11 @@ def test_liquidation_bot(
         solo_margin.address, to_wei(1000000, "ether"), {"from": deployer_address.address}
     )
 
-    discover_eth_vaults.apply_async()
+    with Session(engine) as session:
+        assert session.query(TCAPVaults).count() == 0
+        discover_eth_vaults.apply_async()
+        assert session.query(TCAPVaults).count() == 2
+
     assert weth_vault_handler.getVaultRatio(1) < 150
     check_eth_vaults_for_liquidation.apply_async()
     assert weth_vault_handler.getVaultRatio(1) == 150
