@@ -9,7 +9,12 @@ $ pip install -e .
 ```
 
 Create a `.env` file using  `.env.sample` and fill up the lsi of environment variables.
-The project uses postgres and redis. The env vars for these can be found in the `.env.sample` file. 
+The project uses postgres and redis. The env vars for these can be found in the `.env.sample` file.
+
+To run db migration:
+```bash
+$ alembic upgrade head
+```
 
 To compile the contracts run:
 ```bash
@@ -50,6 +55,12 @@ Install openzeppelin
 ```bash
 $ forge install openzeppelin/openzeppelin-contracts
 ```
+
+Install python test rqeuirements
+```bash
+$ pip install -e ".[dev]"
+```
+
 ## Run tests
 To run smart contract tests
 ```bash
