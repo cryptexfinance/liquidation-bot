@@ -10,6 +10,7 @@ import "./interfaces/DyDx/ISoloMargin.sol";
 import "./interfaces/SushiSwap/ISushiSwapRouter.sol";
 import "./interfaces/CryptexFinance/ITCAPVault.sol";
 
+
 /// @title Liquidate Tcap Vaults
 /// @author Cryptex.Finance
 /// @notice Liquidates TCAP vaults whose vault ratio is below minimum.
@@ -63,7 +64,7 @@ contract LiquidateVault is Ownable {
     address vault,
     uint256 vaultId,
     address[] memory swapPath
-  ) external {
+  ) external onlyOwner {
     ITCAPVault tcapVault = ITCAPVault(vault);
     address[] memory path = new address[](2);
     path[0] = WETHAddress;
@@ -139,6 +140,9 @@ contract LiquidateVault is Ownable {
     Account.Info memory,
     bytes memory data
   ) external {
+    require(
+      msg.sender == address(SOLO_MARGIN), "callFunction: Unauthorized call"
+    );
     (
         uint256 requiredTCAP,
         uint256 liquidationFee,
@@ -163,7 +167,6 @@ contract LiquidateVault is Ownable {
 
     // swap reward for WETH
     if (swapPath.length >= 2) {
-      IERC20(swapPath[0]).approve(address(sushiSwapRouter), reward);
       sushiSwapRouter.swapExactTokensForTokens(
         reward,
         0,
@@ -172,6 +175,10 @@ contract LiquidateVault is Ownable {
         block.timestamp
       );
     }
+  }
+
+  function approve_sushiswap_router(address token) external onlyOwner {
+    IERC20(token).approve(address(sushiSwapRouter), type(uint256).max);
   }
 
   function recoverERC20(address _tokenAddress, uint256 _tokenAmount)

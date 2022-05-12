@@ -206,6 +206,8 @@ contract LiquidationBotTest is Test {
         address[] memory path = new address[](2);
         path[0] = daiAddress;
         path[1] = wethAddress;
+        //      NOTE: Need to approve once before the bot runs
+        bot.approve_sushiswap_router(daiAddress);
         bot.initiateFlashLoan(daiTCAPVaultAddress, 1, path);
         assertTrue(WETH.balanceOf(address(bot)) > 0);
     }
@@ -279,11 +281,13 @@ contract LiquidationBotTest is Test {
             SoloMarginAddress,
             sushiSwapRouterAddress
         );
-//        // begin test
+        // begin test
         assertEq(WETH.balanceOf(address(bot)), 0);
         address[] memory path = new address[](2);
         path[0] = wbtcAddress;
         path[1] = wethAddress;
+//      NOTE: Need to approve once before the bot runs
+        bot.approve_sushiswap_router(wbtcAddress);
         bot.initiateFlashLoan(wbtcTCAPVaultAddress, 1, path);
         assertTrue(WETH.balanceOf(address(bot)) > 0);
         assertEq(bot.owner(), address(this));

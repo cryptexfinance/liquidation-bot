@@ -75,6 +75,6 @@ class Monitor:
             self.vault, vault_id, path, swap_path
         )
         if is_profitable:
-            liquidation_contract.initiateFlashLoan(
+            tx = liquidation_contract.initiateFlashLoan(
                 self.vault, vault_id, swap_path, {"from": accounts[0].address}
             )

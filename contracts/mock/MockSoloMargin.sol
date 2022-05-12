@@ -54,7 +54,7 @@ contract MockSoloMargin {
 
     function _call(Account.Info memory account, Actions.ActionArgs memory action) internal {
         ICalee(account.owner).callFunction(
-            address(this),
+            account.owner,
             account,
             action.data
         );
