@@ -51,7 +51,11 @@ Install openzeppelin
 $ forge install openzeppelin/openzeppelin-contracts
 ```
 ## Run tests
-Tests use forge
+To run smart contract tests
 ```bash
 $ forge test --fork-url YOUR_Kovan_RPC_URL
+```
+To run python tests
+```bash
+$ brownie test
 ```
