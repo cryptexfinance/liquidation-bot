@@ -2,10 +2,11 @@ __pycache__
 .env
 .history
 .hypothesis/
-build/
+/build/
 reports/
 *.pyc
 .idea/
 cache/
 out/
 lib/
+*.egg-info/
