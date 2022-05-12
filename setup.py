@@ -16,7 +16,7 @@ extras_require = {
 }
 
 extras_require['dev'] = (
-    + extras_require['linter']
+    extras_require['linter']
     + extras_require['dev']
 )
 
@@ -41,7 +41,7 @@ setup(
         "psycopg2>=2.9.3,<3.0.0",
         "python-dotenv>=0.16.0,<1.0.0",
         "redis>=4.3.1,<5.0.0",
-        "requests>=2.27.1,<3.0.0"
+        "requests>=2.27.1,<3.0.0",
         "SQLAlchemy>=1.4.36,<2.0.0",
     ],
     python_requires='>=3.8,<3.11',

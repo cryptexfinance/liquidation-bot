@@ -1,37 +1,43 @@
 from pathlib import Path
 
-from brownie.project import load
+from brownie.project import load, get_loaded_projects
 from brownie.network import connect, is_connected
 from sqlalchemy.orm import Session
 
 from bot.gas import GasNowStrategy
 from bot.model import TCAPVaults, VaultTypes, insert_or_update_vaults, engine
-from bot.tasks import check_and_liquidate_eth_vault
 from bot.conf import settings
-project = load(Path(__file__).parent.parent)
-project.load_config()
 
-liquidation_fn_by_vault_type = {
-    VaultTypes.WETH: check_and_liquidate_eth_vault,
-}
+projects = get_loaded_projects()
 
-liquidation_swap_path = {
-    VaultTypes.WETH: [],
-    VaultTypes.WBTC: [settings.WBTCADDRESS, settings.WETHADDRESS],
-    VaultTypes.DAI: [settings.DAIADDRESS, settings.WETHADDRESS],
-    VaultTypes.USDC: [settings.USDCADDRESS, settings.WETHADDRESS],
-}
+if not projects:
+    project = load(Path(__file__).parent.parent)
+    project.load_config()
+else:
+    project = projects[0]
+    assert project._name == "LiquidationBotProject", "incorrect project loaded"
 
 
 class Monitor:
     
     def __init__(self, vault, vault_type, _network):
+        from .tasks import check_and_liquidate_eth_vault
         if not is_connected():
             connect(_network)
         interface = project.interface
         self.vault = vault
         self.tcap_vault = interface.ITCAPVault(vault)
         self.vault_type = vault_type
+        self.liquidation_fn_by_vault_type = {
+            VaultTypes.WETH: check_and_liquidate_eth_vault,
+        }
+
+        self.liquidation_swap_path = {
+            VaultTypes.WETH: [],
+            VaultTypes.WBTC: [settings.WBTCADDRESS, settings.WETHADDRESS],
+            VaultTypes.DAI: [settings.DAIADDRESS, settings.WETHADDRESS],
+            VaultTypes.USDC: [settings.USDCADDRESS, settings.WETHADDRESS],
+        }
 
     def crawl(self):
         no_vaults = self.tcap_vault.counter()[0]
@@ -50,7 +56,7 @@ class Monitor:
                 TCAPVaults.vault_ratio != 0
             ).order_by("vault_ratio")
             for vault in query:
-                liquidation_fn_by_vault_type[self.vault_type].apply_async(
+                self.liquidation_fn_by_vault_type[self.vault_type].apply_async(
                     kwargs={"vault_id": vault.vault_id}
                 )
 
@@ -60,7 +66,7 @@ class Monitor:
         )
         gas_strategy = GasNowStrategy()
         path = [settings.WETHADDRESS, settings.TCAPADDRESS]
-        swap_path = liquidation_swap_path[self.vault_type]
+        swap_path = self.liquidation_swap_path[self.vault_type]
         is_profitable = liquidation_contract.isLiquidationProfitable(
             self.vault, vault_id, path, swap_path
         )

@@ -7,3 +7,8 @@ compiler:
         remappings:
           - "openzeppelin-contracts/=lib/openzeppelin-contracts/"
           - "forge-std/=lib/forge-std/src/"
+networks:
+  development:
+      cmd_settings:
+        accounts: 10
+        default_balance: 1000000

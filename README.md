@@ -25,11 +25,11 @@ $ celery -A bot beat -l info
 
 To deploy the liquidation contract:
 ```bash
-brownie run deploy.py --network mainnet
+brownie run deploy.py --network kovan
 ```
 
 To run the celery scheduler
-``` bash
+```bash
 $ celery -A bot beat -l info
 ```
 
