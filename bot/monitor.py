@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from brownie.project import load, get_loaded_projects
-from brownie.network import connect, is_connected
+from brownie.network import connect, is_connected, accounts
+
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
@@ -75,5 +76,5 @@ class Monitor:
         )
         if is_profitable:
             liquidation_contract.initiateFlashLoan(
-                self.vault, vault_id, swap_path,
+                self.vault, vault_id, swap_path, {"from": accounts[0].address}
             )

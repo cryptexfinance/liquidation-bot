@@ -173,3 +173,4 @@ def test_liquidation_bot(
     assert weth_vault_handler.getVaultRatio(1) < 150
     check_eth_vaults_for_liquidation.apply_async()
     assert weth_vault_handler.getVaultRatio(1) == 150
+    assert WETH.balanceOf(liquidate_vault.address) > 0

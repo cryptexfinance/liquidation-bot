@@ -160,54 +160,11 @@ def weth_vault_handler(
 
 
 @pytest.fixture()
-def admin_impl(web3, deployer_address):
-    return deploy(
-        web3,
-        "AdminImpl",
-        (),
-        deployer_address,
-        TEST_BUILD_DIR / "AdminImpl.json"
-    )
-
-
-@pytest.fixture()
-def operation_impl(web3, deployer_address):
-    return deploy(
-        web3,
-        "OperationImpl",
-        (),
-        deployer_address,
-        TEST_BUILD_DIR / "OperationImpl.json"
-    )
-
-
-@pytest.fixture()
-def solo_margin(web3, deployer_address, admin_impl, operation_impl):
-    return deploy(
-        web3,
-        "SoloMargin",
-        (
-            (
-                (150000000000000000,),
-                (50000000000000000,),
-                (900000000000000000,),
-                (0,)
-            ),
-            (
-                2000000000000000000,
-                500000000000000000,
-                1000000000000000000,
-                2000000000000000000,
-                2000000000000000000,
-                100000000000000000000
-            )
-        ),
-        deployer_address,
-        TEST_BUILD_DIR / "SoloMargin.json",
-        libraries={
-            "AdminImpl": admin_impl,
-            "OperationImpl": operation_impl
-        }
+def solo_margin(web3, deployer_address, WETH):
+    _project = project.get_loaded_projects()[0]
+    return _project.MockSoloMargin.deploy(
+        WETH.address,
+        {"from": deployer_address}
     )
 
 
@@ -243,7 +200,7 @@ def liquidate_vault(
         TCAP.address,
         solo_margin.address,
         sushi_swap_router.address,
-        {"from": deployer_address}
+        {"from": deployer_address.address}
     )
 
 
