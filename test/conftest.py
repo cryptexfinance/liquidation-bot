@@ -245,3 +245,21 @@ def liquidate_vault(
         sushi_swap_router.address,
         {"from": deployer_address}
     )
+
+
+@pytest.fixture(autouse=True)
+def override_settings(WETH, TCAP, weth_vault_handler, liquidate_vault):
+    from bot.conf import os
+    os.environ["WETH_ADDRESS"] = WETH.address
+    os.environ["TCAP_ADDRESS"] = TCAP.address
+    os.environ["WETH_VAULT_TCAP_ADDRESS"] = weth_vault_handler.address
+    os.environ["WBTC_VAULT_TCAP_ADDRESS"] = weth_vault_handler.address
+    os.environ["DAI_VAULT_TCAP_ADDRESS"] = weth_vault_handler.address
+    os.environ["USDC_VAULT_TCAP_ADDRESS"] = weth_vault_handler.address
+    os.environ["LIQUIDATE_VAULT_ADDRESS"] = liquidate_vault.address
+
+
+@pytest.fixture(autouse=True)
+def celery_eager_mode(override_settings):
+    from bot.celery import app
+    app.conf.task_always_eager = True

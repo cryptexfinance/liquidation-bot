@@ -21,22 +21,18 @@ else:
 class Monitor:
     
     def __init__(self, vault, vault_type, _network):
-        from .tasks import check_and_liquidate_eth_vault
         if not is_connected():
             connect(_network)
         interface = project.interface
         self.vault = vault
         self.tcap_vault = interface.ITCAPVault(vault)
         self.vault_type = vault_type
-        self.liquidation_fn_by_vault_type = {
-            VaultTypes.WETH: check_and_liquidate_eth_vault,
-        }
 
         self.liquidation_swap_path = {
             VaultTypes.WETH: [],
-            VaultTypes.WBTC: [settings.WBTCADDRESS, settings.WETHADDRESS],
-            VaultTypes.DAI: [settings.DAIADDRESS, settings.WETHADDRESS],
-            VaultTypes.USDC: [settings.USDCADDRESS, settings.WETHADDRESS],
+            VaultTypes.WBTC: [settings.WBTC_ADDRESS, settings.WETH_ADDRESS],
+            VaultTypes.DAI: [settings.DAI_ADDRESS, settings.WETH_ADDRESS],
+            VaultTypes.USDC: [settings.USDC_ADDRESS, settings.WETH_ADDRESS],
         }
 
     def crawl(self):
@@ -50,22 +46,26 @@ class Monitor:
             )
 
     def check_vaults_for_liquidation(self):
+        from .tasks import check_and_liquidate_eth_vault
+        liquidation_fn_by_vault_type = {
+            VaultTypes.WETH: check_and_liquidate_eth_vault,
+        }
         with Session(engine) as session:
-            query = session(TCAPVaults).filter(
+            query = session.query(TCAPVaults).filter(
                 TCAPVaults.vault_type == self.vault_type,
                 TCAPVaults.vault_ratio != 0
             ).order_by("vault_ratio")
-            for vault in query:
-                self.liquidation_fn_by_vault_type[self.vault_type].apply_async(
-                    kwargs={"vault_id": vault.vault_id}
+            for vault in query.all():
+                liquidation_fn_by_vault_type[self.vault_type].apply_async(
+                    kwargs={"vault_id": vault.id}
                 )
 
     def check_and_liquidate_vault(self, vault_id):
         liquidation_contract = project.LiquidateVault.at(
-            settings.LIQUIDATEVAULTADDRESS
+            settings.LIQUIDATE_VAULT_ADDRESS
         )
         gas_strategy = GasNowStrategy()
-        path = [settings.WETHADDRESS, settings.TCAPADDRESS]
+        path = [settings.WETH_ADDRESS, settings.TCAP_ADDRESS]
         swap_path = self.liquidation_swap_path[self.vault_type]
         is_profitable = liquidation_contract.isLiquidationProfitable(
             self.vault, vault_id, path, swap_path

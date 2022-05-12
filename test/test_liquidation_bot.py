@@ -58,7 +58,7 @@ def setup_eth_tcap_exchange(
         TCAP,
         WETH,
         project,
-        sushi_swap_router
+        sushi_swap_router,
 ):
     # Exchange setup
     tcap_to_mint = to_wei(2000, "ether")
@@ -115,6 +115,7 @@ def test_liquidation_bot(
     user,
     project,
 ):
+    from bot.tasks import discover_eth_vaults, check_eth_vaults_for_liquidation
     eth_price = 1888
     tcap_price = 123
     tcap_divisor = 10000000000
@@ -143,4 +144,18 @@ def test_liquidation_bot(
         project,
         sushi_swap_router
     )
+    WETH.deposit(
+        {"value": to_wei(1000000, "ether"), "from": deployer_address.address}
+    )
+    WETH.approve(
+        solo_margin.address, 2 ** 256 - 1,
+        {"from": deployer_address.address}
+    )
+    WETH.transfer(
+        solo_margin.address, to_wei(1000000, "ether"), {"from": deployer_address.address}
+    )
 
+    discover_eth_vaults.apply_async()
+    assert weth_vault_handler.getVaultRatio(1) < 150
+    check_eth_vaults_for_liquidation.apply_async()
+    assert weth_vault_handler.getVaultRatio(1) == 150

@@ -1,33 +1,31 @@
-import os
-
 from .celery import app
 from .monitor import Monitor
 from .model import VaultTypes
-
+from .conf import settings
 
 weth_vault_monitor = Monitor(
-    os.environ["WETH_VAULT_TCAP_ADDRESS"],
+    settings.WETH_VAULT_TCAP_ADDRESS,
     VaultTypes.WETH,
-    os.environ["NETWORK"]
+    settings.NETWORK
 )
 
 wbtc_vault_monitor = Monitor(
-    os.environ["WBTC_VAULT_TCAP_ADDRESS"],
+    settings.WBTC_VAULT_TCAP_ADDRESS,
     VaultTypes.WBTC,
-    os.environ["NETWORK"]
+    settings.NETWORK
 )
 
 dai_vault_monitor = Monitor(
-    os.environ["DAI_VAULT_TCAP_ADDRESS"],
+    settings.DAI_VAULT_TCAP_ADDRESS,
     VaultTypes.DAI,
-    os.environ["NETWORK"]
+    settings.NETWORK
 )
 
 
 usdc_vault_monitor = Monitor(
-    os.environ["USDC_VAULT_TCAP_ADDRESS"],
+    settings.USDC_VAULT_TCAP_ADDRESS,
     VaultTypes.USDC,
-    os.environ["NETWORK"]
+    settings.NETWORK
 )
 
 
