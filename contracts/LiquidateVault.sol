@@ -136,13 +136,16 @@ contract LiquidateVault is Ownable {
 
   /// @notice callback called by dydx ISoloMargin
   function callFunction(
-    address,
+    address sender,
     Account.Info memory,
     bytes memory data
   ) external {
+
     require(
-      msg.sender == address(SOLO_MARGIN), "callFunction: Unauthorized call"
+      msg.sender == address(SOLO_MARGIN) && sender == address(this),
+      "callFunction: Unauthorized call"
     );
+
     (
         uint256 requiredTCAP,
         uint256 liquidationFee,
@@ -150,6 +153,7 @@ contract LiquidateVault is Ownable {
         uint256 vaultId,
         address[] memory swapPath
     ) = abi.decode(data, (uint256, uint256, address, uint256, address[]));
+
     ITCAPVault tcapVault = ITCAPVault(vault);
     address[] memory path = new address[](2);
     path[0] = WETHAddress;
